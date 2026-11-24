@@ -7,6 +7,7 @@
 
 const RECIPE_FILE = "./recipes.json";
 let allRecipesPromise = null;
+let insightCandidatePool = [];
 
 const DAYS = [
   "Monday", "Tuesday", "Wednesday",
@@ -127,7 +128,7 @@ function isCookingWater(name) {
 
 function getIngredients(meal) {
   if (ingredientCache.has(meal)) return ingredientCache.get(meal);
-  const items = (meal.ingredients || []).map(raw => {
+  const items = (meal.ingredients || []).filter(raw => !/^(?:and|or|divided|beaten|optional|boneless|skinless|chopped|diced|drained|rinsed)$/i.test(String(raw).trim())).map(raw => {
     // Preserve the original ingredient text for the grocery list.
     // Quantity parsing is best-effort; ambiguous entries remain unspecified.
     const match = raw.match(/^((?:\d+(?:\.\d+)?|[¼½¾⅓⅔⅛⅜⅝⅞]|\d+\/\d+)(?:\s+(?:\d+\/\d+))?\s*(?:(?:cups?|tsp|tbsp|tablespoons?|teaspoons?|ounces?|oz|lbs?|pounds?|grams?|g|kg|ml|liters?|cloves?|cans?|packages?|slices?|pieces?)\b)?)/i);
@@ -1276,24 +1277,51 @@ function renderCalendar() {
   }
 }
 function renderTwoWeekInsights(){
-  const panel=$('plan-analysis');if(!panel)return;
-  panel.hidden=false;
+  const panel=$('plan-analysis'); if(!panel)return;
   const entries=plans.flat().map(x=>x.meal);
   const counts=new Map();
-  entries.forEach(meal=>ingredientNames(meal).forEach(name=>{if(!isCookingWater(name))counts.set(name,(counts.get(name)||0)+1)}));
+  entries.forEach(meal=>ingredientNames(meal).forEach(name=>{
+    if(!isCookingWater(name)) counts.set(name,(counts.get(name)||0)+1);
+  }));
   const reused=[...counts].filter(([_,n])=>n>=2).sort((a,b)=>b[1]-a[1]);
   $('reuse-percentage').textContent=counts.size?`${Math.round(100*reused.length/counts.size)}%`:'—';
   $('unique-ingredients').textContent=counts.size||'—';
-  $('reused-ingredients').textContent=reused.length||'0';
-  $('package-leftovers').textContent='See groceries';
-  $('optimized-count').textContent=counts.size?`${counts.size} ingredients`:'Generate a plan first';
-  $('random-count').textContent='Not calculated';
-  $('comparison-summary').textContent='Ingredient reuse is calculated from the selected recipes across both weeks. Random-plan comparison is not available in this version.';
-  const target=$('reuse-details');if(target){target.replaceChildren();
-    const h=document.createElement('h3');h.textContent='Ingredients used in multiple recipes';target.append(h);
-    const p=document.createElement('p');p.textContent=reused.length?reused.map(([name,n])=>`${name} (${n} recipes)`).join(' · '):'Generate a plan to see your reused ingredients.';target.append(p);
+  $('reused-ingredients').textContent=reused.length;
+  // Only cataloged, measured packages are included in this estimate.
+  let ratios=[];
+  for(const item of weekLeftovers[1].values()){
+    const catalog=PACKAGE_CATALOG[item.name];
+    if(!catalog || catalog.type!==item.type)continue;
+    const bought=[...weekPurchases[0].values(),...weekPurchases[1].values()]
+      .filter(x=>x.name===item.name && x.type===item.type)
+      .reduce((s,x)=>s+x.amount,0);
+    if(bought>0)ratios.push(item.amount/bought);
   }
+  $('package-leftovers').textContent=ratios.length?`${Math.round(100*ratios.reduce((a,b)=>a+b,0)/ratios.length)}%`:'N/A';
+  $('optimized-count').textContent=entries.length?`${counts.size} ingredients`:'Generate a plan first';
+  const target=$('reuse-details'); if(target){target.replaceChildren();
+    const h=document.createElement('h3');h.textContent='Ingredients used in multiple recipes';target.append(h);
+    const p=document.createElement('p');p.textContent=reused.length?reused.map(([name,n])=>`${name} (${n} recipes)`).join(' · '):'No reused ingredients yet.';target.append(p);
+  }
+  // Fair comparison: sample the same number of distinct recipes from the SAME
+  // eligible candidate pool; report observed unique-ingredient counts only.
+  if(!entries.length || insightCandidatePool.length<entries.length){
+    $('random-count').textContent='Not available';
+    $('comparison-summary').textContent='Generate a plan to compare against random recipe selections.';
+    return;
+  }
+  const samples=200;let sum=0;
+  for(let i=0;i<samples;i++){
+    const sampled=shuffle([...insightCandidatePool]).slice(0,entries.length);
+    const unique=new Set();
+    sampled.forEach(meal=>ingredientNames(meal).forEach(name=>{if(!isCookingWater(name))unique.add(name)}));
+    sum+=unique.size;
+  }
+  const avg=sum/samples; const diff=avg-counts.size;
+  $('random-count').textContent=`${avg.toFixed(1)} ingredients`;
+  $('comparison-summary').textContent=`Your plan uses ${Math.abs(diff).toFixed(1)} ${diff>=0?'fewer':'more'} distinct ingredients than the average of ${samples} random selections from the same eligible recipe pool. This compares ingredient variety, not measured food waste or total grocery cost.`;
 }
+
 function renderShopping() {
   const host=$('grocery-list');host.replaceChildren();
   for(let w=0;w<2;w++) {
@@ -1341,7 +1369,7 @@ async function generateTwoWeeks(random=false) {
     const pool=await buildRecipePool(requested,120);
     const valid=pool.filter(m=>Number.isInteger(m.servings)&&m.servings>0&&m.servings<=100);
     if(valid.length<counts[0].length+counts[1].length)throw Error('Not enough recipes with serving counts.');
-    preferredIngredients=requested;unknownQuantities=[];
+    preferredIngredients=requested;unknownQuantities=[];insightCandidatePool=valid;
     plans[0]=selectWeek(valid,counts[0],new Map());
     const first=buyForWeek(plans[0],new Map(),1);weekPurchases[0]=first.purchases;weekLeftovers[0]=first.remaining;
     plans[1]=selectWeek(valid,counts[1],first.remaining,new Set(plans[0].map(x=>x.meal.idMeal)));
@@ -1354,7 +1382,7 @@ async function generateTwoWeeks(random=false) {
 }
 function resetTwoWeeks() {
   if(isGenerating)return;
-  plans=[[],[]];schedules=[[],[]];mealStatuses=[Array(14).fill("pending"),Array(14).fill("pending")];
+  insightCandidatePool=[];plans=[[],[]];schedules=[[],[]];mealStatuses=[Array(14).fill("pending"),Array(14).fill("pending")];
   try { localStorage.removeItem(TRACKING_KEY); } catch {}
   weekPurchases=[new Map(),new Map()];weekLeftovers=[new Map(),new Map()];
   $('ingredient-input').value='';$('two-week-calendar').replaceChildren();$('grocery-list').replaceChildren();
