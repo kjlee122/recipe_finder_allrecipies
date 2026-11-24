@@ -1223,59 +1223,75 @@ function updateMealStatus(week,index, status) {
     status === 'eaten' ? 'Meal marked eaten. Remaining portions updated.' : 'Meal returned to pending.');
 }
 function renderCalendar() {
-  const host = $('two-week-calendar'); host.replaceChildren();
-  for (let w = 0; w < 2; w++) {
-    const section = document.createElement('section');
-    const title = document.createElement('h3'); title.textContent = `Week ${w+1}`; section.append(title);
-    const intro = document.createElement('p');
-    intro.textContent = 'Choose your meals and mark each one Eaten, Not yet, or Skipped. A skipped portion becomes available to assign elsewhere. Cooking and storage are suggestions.';
-    section.append(intro);
-    const table = document.createElement('table'); table.className = 'calendar-table';
-    const header = document.createElement('tr');
-    for (const name of ['Day','Lunch','Dinner']) { const th=document.createElement('th');th.textContent=name;header.append(th); }
-    table.append(header);
-    DAYS.forEach((day,d) => {
-      const tr = document.createElement('tr'); const th=document.createElement('th');th.textContent=day;tr.append(th);
-      for (let t=0;t<2;t++) {
-        const i=d*2+t, td=document.createElement('td'), chosen=schedules[w][i], status=mealStatuses[w][i];
-        const select=document.createElement('select'); select.setAttribute('aria-label',`${day} ${SLOT_NAMES[t]} week ${w+1}`);
-        const blank=document.createElement('option');blank.value='';blank.textContent='Unplanned';select.append(blank);
-        plans[w].forEach((entry,j)=>{const opt=document.createElement('option');opt.value=String(j);opt.textContent=entry.meal.strMeal;select.append(opt);});
-        select.value=chosen === null ? '' : String(chosen);
-        select.disabled=status==='eaten';
-        select.addEventListener('change',()=>updateCalendarSlot(w,i,select.value));td.append(select);
-        if (chosen !== null) {
-          const first=schedules[w].findIndex((v,k)=>v===chosen && mealStatuses[w][k]!=='skipped')===i;
-          const note=document.createElement('div');note.textContent=first?'Suggested cook / prepare':'Portion — refrigerate or freeze safely';td.append(note);
-          const controls=document.createElement('div');controls.className='meal-tracking';
-          const statusLabel=document.createElement('label');statusLabel.textContent='Status: ';
-          const statusSelect=document.createElement('select');statusSelect.setAttribute('aria-label',`${day} ${SLOT_NAMES[t]} meal status`);
-          [['pending','Not yet'],['eaten','Eaten ✓'],['skipped','Skipped / ate out']].forEach(([value,label])=>{
-            const option=document.createElement('option');option.value=value;option.textContent=label;statusSelect.append(option);
-          });
-          statusSelect.value=status;
-          statusSelect.addEventListener('change',()=>updateMealStatus(w,i,statusSelect.value));
-          statusLabel.append(statusSelect);controls.append(statusLabel);td.append(controls);
-          const link=document.createElement('a');link.href=plans[w][chosen].meal.url;link.target='_blank';link.rel='noopener noreferrer';link.textContent='View recipe';td.append(link);
-          if(status==='skipped')td.classList.add('meal-skipped');
-          if(status==='eaten')td.classList.add('meal-eaten');
-        } else td.className='meal-gap';
-        tr.append(td);
-      } table.append(tr);
-    });section.append(table);
+  const host=$('two-week-calendar');
+  const active=host.dataset.activeWeek || '1';
+  host.replaceChildren();host.dataset.activeWeek=active;
+  for(let w=0;w<2;w++){
+    const section=document.createElement('section');section.className='calendar-week';
     const eaten=mealStatuses[w].filter((x,i)=>x==='eaten'&&schedules[w][i]!==null).length;
-    const skipped=mealStatuses[w].filter((x,i)=>x==='skipped'&&schedules[w][i]!==null).length;
     const assigned=schedules[w].filter((x,i)=>x!==null&&mealStatuses[w][i]!=='skipped').length;
-    const remaining=plans[w].map((x,j)=>x.count-schedules[w].filter((v,i)=>v===j&&mealStatuses[w][i]==='eaten').length);
-    const unallocated=plans[w].map((x,j)=>x.count-assignedCount(w,j));
-    const summary=document.createElement('p');
-    summary.textContent=`${eaten} eaten · ${remaining.reduce((a,b)=>a+b,0)} portions not eaten · ${skipped} skipped slots · ${14-assigned} open or skipped slots · ${unallocated.reduce((a,b)=>a+b,0)} servings available to schedule`;
+    const total=plans[w].reduce((n,x)=>n+x.count,0);
+    const summary=document.createElement('div');summary.className='calendar-summary';
+    summary.textContent=`${total} servings planned · ${eaten} eaten · ${Math.max(0,total-eaten)} remaining · ${14-assigned} open slots`;
     section.append(summary);
+    const grid=document.createElement('div');grid.className='week-calendar-grid';
+    DAYS.forEach((day,d)=>{
+      const cell=document.createElement('article');cell.className='day-card';
+      const label=document.createElement('h3');label.textContent=day;cell.append(label);
+      for(let t=0;t<2;t++){
+        const i=d*2+t,chosen=schedules[w][i],status=mealStatuses[w][i];
+        const slot=document.createElement('div');slot.className='meal-slot'+(chosen===null?' is-open':'')+(status==='eaten'?' is-eaten':'')+(status==='skipped'?' is-skipped':'');
+        const name=document.createElement('span');name.className='slot-label';name.textContent=SLOT_NAMES[t];slot.append(name);
+        const select=document.createElement('select');select.className='slot-meal';select.setAttribute('aria-label',`${day} ${SLOT_NAMES[t]} week ${w+1}`);
+        const blank=document.createElement('option');blank.value='';blank.textContent='+ Add meal';select.append(blank);
+        plans[w].forEach((entry,j)=>{const opt=document.createElement('option');opt.value=String(j);opt.textContent=entry.meal.strMeal;select.append(opt)});
+        select.value=chosen===null?'':String(chosen);select.disabled=status==='eaten';
+        select.addEventListener('change',()=>updateCalendarSlot(w,i,select.value));slot.append(select);
+        if(chosen!==null){
+          const first=schedules[w].findIndex((v,k)=>v===chosen&&mealStatuses[w][k]!=='skipped')===i;
+          const hint=document.createElement('span');hint.className='slot-hint';hint.textContent=first?'Suggested cook day':'Leftover portion';slot.append(hint);
+          const controls=document.createElement('div');controls.className='slot-actions';
+          const check=document.createElement('label');check.className='eaten-check';
+          const box=document.createElement('input');box.type='checkbox';box.checked=status==='eaten';
+          box.addEventListener('change',()=>updateMealStatus(w,i,box.checked?'eaten':'pending'));
+          check.append(box,document.createTextNode(' Eaten'));controls.append(check);
+          const skip=document.createElement('button');skip.type='button';skip.className='skip-button';skip.textContent=status==='skipped'?'Undo skip':'Skip';
+          skip.addEventListener('click',()=>updateMealStatus(w,i,status==='skipped'?'pending':'skipped'));
+          controls.append(skip);slot.append(controls);
+          const link=document.createElement('a');link.href=plans[w][chosen].meal.url;link.target='_blank';link.rel='noopener noreferrer';link.textContent='Recipe ↗';link.className='recipe-link';slot.append(link);
+        }
+        cell.append(slot);
+      }
+      grid.append(cell);
+    });
+    section.append(grid);
+    const details=document.createElement('details');details.className='portion-details';
+    const detailsTitle=document.createElement('summary');detailsTitle.textContent='View remaining servings by recipe';details.append(detailsTitle);
     const list=document.createElement('ul');list.className='remaining-servings';
     plans[w].forEach((x,j)=>{
-      const li=document.createElement('li');li.textContent=`${x.meal.strMeal}: ${remaining[j]} not eaten (${unallocated[j]} available to schedule)`;list.append(li);
-    });section.append(list);
-    host.append(section);
+      const left=x.count-schedules[w].filter((v,i)=>v===j&&mealStatuses[w][i]==='eaten').length;
+      const available=x.count-assignedCount(w,j);
+      const li=document.createElement('li');li.textContent=`${x.meal.strMeal}: ${left} not eaten · ${available} available to schedule`;list.append(li);
+    });details.append(list);section.append(details);host.append(section);
+  }
+}
+function renderTwoWeekInsights(){
+  const panel=$('plan-analysis');if(!panel)return;
+  panel.hidden=false;
+  const entries=plans.flat().map(x=>x.meal);
+  const counts=new Map();
+  entries.forEach(meal=>ingredientNames(meal).forEach(name=>{if(!isCookingWater(name))counts.set(name,(counts.get(name)||0)+1)}));
+  const reused=[...counts].filter(([_,n])=>n>=2).sort((a,b)=>b[1]-a[1]);
+  $('reuse-percentage').textContent=counts.size?`${Math.round(100*reused.length/counts.size)}%`:'—';
+  $('unique-ingredients').textContent=counts.size||'—';
+  $('reused-ingredients').textContent=reused.length||'0';
+  $('package-leftovers').textContent='See groceries';
+  $('optimized-count').textContent=counts.size?`${counts.size} ingredients`:'Generate a plan first';
+  $('random-count').textContent='Not calculated';
+  $('comparison-summary').textContent='Ingredient reuse is calculated from the selected recipes across both weeks. Random-plan comparison is not available in this version.';
+  const target=$('reuse-details');if(target){target.replaceChildren();
+    const h=document.createElement('h3');h.textContent='Ingredients used in multiple recipes';target.append(h);
+    const p=document.createElement('p');p.textContent=reused.length?reused.map(([name,n])=>`${name} (${n} recipes)`).join(' · '):'Generate a plan to see your reused ingredients.';target.append(p);
   }
 }
 function renderShopping() {
@@ -1330,7 +1346,7 @@ async function generateTwoWeeks(random=false) {
     const first=buyForWeek(plans[0],new Map(),1);weekPurchases[0]=first.purchases;weekLeftovers[0]=first.remaining;
     plans[1]=selectWeek(valid,counts[1],first.remaining,new Set(plans[0].map(x=>x.meal.idMeal)));
     const second=buyForWeek(plans[1],first.remaining,2);weekPurchases[1]=second.purchases;weekLeftovers[1]=second.remaining;
-    schedules=plans.map(makeSchedule);mealStatuses=[Array(14).fill("pending"),Array(14).fill("pending")];saveProgress();renderCalendar();renderShopping();
+    schedules=plans.map(makeSchedule);mealStatuses=[Array(14).fill("pending"),Array(14).fill("pending")];saveProgress();renderCalendar();renderShopping();renderTwoWeekInsights();
     $('plan-analysis').hidden=true;
     setStatus(`Two weeks ready. Week 1: ${plans[0].reduce((n,x)=>n+x.count,0)} meals; Week 2: ${plans[1].reduce((n,x)=>n+x.count,0)} meals. Grocery amounts are estimates.`);
   }catch(error){console.error(error);setStatus(error.message||'Unable to generate plan.');}
@@ -1365,7 +1381,7 @@ $('reset-button').addEventListener('click',resetTwoWeeks);
     unknownQuantities=[];
     const first=buyForWeek(plans[0],new Map(),1);weekPurchases[0]=first.purchases;weekLeftovers[0]=first.remaining;
     const second=buyForWeek(plans[1],first.remaining,2);weekPurchases[1]=second.purchases;weekLeftovers[1]=second.remaining;
-    renderCalendar();renderShopping();
+    renderCalendar();renderShopping();renderTwoWeekInsights();
     setStatus('Your saved meal schedule and eaten/skipped progress were restored.');
   } catch(error) { console.warn('Unable to restore saved meal plan',error); }
 })();

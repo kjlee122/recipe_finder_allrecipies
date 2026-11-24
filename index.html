@@ -8,28 +8,28 @@
   <meta name="viewport"
         content="width=device-width, initial-scale=1.0">
 
-  <title>Little Plate · Meal Planner</title>
+  <title>Meal Planner · Two Weeks</title>
 
-  <link rel="stylesheet" href="two-week.css">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=4">
 </head>
 
 <body>
 
   <header>
-    <div class="eyebrow">PLAN • COOK • ENJOY</div>
-    <h1>Little Plate</h1>
+    <div class="eyebrow">YOUR EVERYDAY MEAL COMPANION</div>
+    <h1>Meal Planner<span class="heading-dot">.</span></h1>
 
     <p>
-      Your two-week lunch and dinner companion.
+      Simple meals, less waste, more time for you.
     </p>
   </header>
 
   <nav class="app-tabs" aria-label="Planner sections">
-    <button class="app-tab is-active" type="button" data-tab="plan">1. Plan</button>
-    <button class="app-tab" type="button" data-tab="calendar">2. Calendar</button>
-    <button class="app-tab" type="button" data-tab="groceries">3. Groceries</button>
-    <button class="app-tab" type="button" data-tab="insights">4. Insights</button>
+    <button class="app-tab is-active" type="button" data-tab="plan">Plan</button>
+    <button class="app-tab" type="button" data-tab="week1">Week 1</button>
+    <button class="app-tab" type="button" data-tab="week2">Week 2</button>
+    <button class="app-tab" type="button" data-tab="groceries">Grocery list</button>
+    <button class="app-tab" type="button" data-tab="insights">Insights</button>
   </nav>
   <main>
 
@@ -94,19 +94,15 @@
 
     <!-- WEEKLY MEAL PLAN -->
 
-    <section id="weekly-plan" class="planner-card app-panel" data-panel="calendar" hidden>
+    <section id="weekly-plan" class="planner-card app-panel" data-panel="week1" hidden>
 
-      <h2>Your calendar</h2>
+      <h2 id="calendar-heading">Week 1 <span class="subtle-heading">· Your meal calendar</span></h2>
 
       <p>
-        Use the suggested schedule as a starting point. Choose your own lunch and dinner days, and see open slots and unassigned servings.
+        Tap any meal to choose what to eat, mark it eaten, or skip it. Your schedule is a guide — change it anytime.
       </p>
 
-      <div class="week-switch" aria-label="Calendar week">
-        <button type="button" class="week-tab is-active" data-week="1">Week 1</button>
-        <button type="button" class="week-tab" data-week="2">Week 2</button>
-      </div>
-      <div id="two-week-calendar"></div>
+      <div id="two-week-calendar" data-active-week="1"></div>
       <div id="recipe-results" hidden>
         <!-- JavaScript generates meal cards here -->
       </div>
@@ -114,11 +110,10 @@
     </section>
 
 <section id="plan-analysis" class="app-panel" data-panel="insights" hidden>
-  <h2>Weekly Plan Analysis</h2>
+  <h2>Your two-week insights</h2>
 
   <p>
-    See how your optimized meal plan compares
-    with randomly selected meals.
+    See what you are reusing, how many ingredients you need, and what may be left over.
   </p>
 
   <div class="analysis-grid">
@@ -147,6 +142,7 @@
     </div>
   </div>
 
+  <div id="reuse-details" class="reuse-details"></div>
   <div class="comparison-results">
     <h3>Optimized vs. Random Meal Plans</h3>
 
@@ -172,7 +168,7 @@
       <h2>Grocery lists</h2>
 
       <p>
-        Estimated purchases are separated by week; Week 2 uses measured leftovers from Week 1.
+        A simple shopping checklist for each week. Week 2 uses measured ingredients remaining from Week 1.
       </p>
 
       <ul id="grocery-list">

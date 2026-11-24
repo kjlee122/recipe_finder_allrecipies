@@ -1,28 +1,19 @@
 "use strict";
 (() => {
-  const tabs = [...document.querySelectorAll('[data-tab]')];
-  const panels = [...document.querySelectorAll('[data-panel]')];
-  function showTab(tab) {
-    tabs.forEach(b => { const active=b.dataset.tab===tab; b.classList.toggle('is-active',active);b.setAttribute('aria-current',active?'page':'false'); });
-    panels.forEach(p => { p.hidden = p.dataset.panel!==tab; });
-    // The analysis panel is populated by the planner only when available.
-    if(tab==='insights' && !document.getElementById('optimized-count').textContent.trim().replace('—','')) {
-      const panel=document.getElementById('plan-analysis');
-      panel.hidden=false;
+  const tabs=[...document.querySelectorAll('[data-tab]')];
+  const panels=[...document.querySelectorAll('[data-panel]')];
+  const calendar=document.getElementById('two-week-calendar');
+  function showTab(tab){
+    tabs.forEach(b=>{const on=b.dataset.tab===tab;b.classList.toggle('is-active',on);b.setAttribute('aria-current',on?'page':'false')});
+    panels.forEach(p=>{p.hidden=p.dataset.panel!==(tab==='week2'?'week1':tab)});
+    if(tab==='week1'||tab==='week2'){
+      const w=tab==='week1'?'1':'2';calendar.dataset.activeWeek=w;
+      document.getElementById('calendar-heading').innerHTML='Week '+w+' <span class="subtle-heading">· Your meal calendar</span>';
     }
+    if(tab==='insights' && typeof renderTwoWeekInsights==='function')renderTwoWeekInsights();
   }
   tabs.forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
-  const weekButtons=[...document.querySelectorAll('[data-week]')];
-  function showWeek(week) {
-    const calendar=document.getElementById('two-week-calendar');
-    calendar.dataset.activeWeek=week;
-    weekButtons.forEach(b=>b.classList.toggle('is-active',b.dataset.week===week));
-  }
-  weekButtons.forEach(b=>b.addEventListener('click',()=>showWeek(b.dataset.week)));
-  showWeek('1');showTab('plan');
-  const calendar=document.getElementById('two-week-calendar');
-  const observer=new MutationObserver(()=>{
-    if(calendar.children.length && document.querySelector('[data-panel="plan"]:not([hidden])')) showTab('calendar');
-  });
+  const observer=new MutationObserver(()=>{if(calendar.children.length && document.querySelector('[data-panel="plan"]:not([hidden])'))showTab('week1')});
   observer.observe(calendar,{childList:true});
+  showTab('plan');
 })();
