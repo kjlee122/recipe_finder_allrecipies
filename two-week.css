@@ -1,0 +1,15 @@
+
+/* Two-week calendar additions */
+.planner-settings { margin: 1.5rem 0; }
+.week-controls { display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1rem; }
+.week-controls fieldset { border:1px solid #ccc;border-radius:8px;padding:1rem; }
+.week-controls select { margin-left:.5rem;padding:.35rem; }
+.repeat-controls { display:grid;gap:.5rem;margin:1rem 0; }
+.repeat-controls label { display:flex;justify-content:space-between;gap:.5rem;align-items:center; }
+.repeat-controls input { width:4rem;padding:.35rem; }
+#two-week-calendar section { margin:2rem 0;overflow-x:auto; }
+.calendar-table { width:100%;border-collapse:collapse;min-width:540px; }
+.calendar-table th,.calendar-table td { border:1px solid #ddd;padding:.7rem;vertical-align:top;text-align:left; }
+.calendar-table td div { font-size:.85em;color:#555;margin:.3rem 0; }
+.calendar-table td a { font-size:.85em; }
+.calendar-table .meal-gap { background:#f7f3ec;color:#6d6257; }
