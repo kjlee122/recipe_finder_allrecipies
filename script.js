@@ -124,7 +124,7 @@ function isCookingWater(name) {
 
 // Reject standalone preparation notes, not ingredients with unknown amounts.
 const NON_INGREDIENT_LABELS = new Set([
-  "and", "or", "divided", "beaten", "lightly beaten", "well beaten",
+  "and", "or", "divided", "beaten", "lightly beaten", "well beaten", "slightly beaten", "beaten to mix",
   "chopped", "finely chopped", "diced", "minced", "sliced", "shredded",
   "drained", "rinsed", "peeled", "crushed", "melted", "softened",
   "thawed", "cooled", "cooked", "uncooked", "optional", "to taste",
@@ -136,7 +136,7 @@ function isDescriptorOnly(value) {
   const label = String(value || "").toLowerCase().trim()
     .replace(/^[,;:()\s]+|[,;:()\s.]+$/g, "")
     .replace(/\s+/g, " ");
-  return !label || NON_INGREDIENT_LABELS.has(label);
+  return !label || NON_INGREDIENT_LABELS.has(label) || /^(?:(?:lightly|slightly|well|gently|thoroughly)\s+)?(?:beaten|divided|chopped|drained|softened|melted|thawed)(?:\s+(?:to mix|well|for mixing))?$/.test(label);
 }
 function cleanIngredientLabel(value) {
   return String(value || "")
@@ -1305,6 +1305,8 @@ function renderCalendar() {
 function renderTwoWeekInsights(){
   const panel=$('plan-analysis'); if(!panel)return;
   const entries=plans.flat().map(x=>x.meal);
+  // Visibility is controlled by the tab UI, never by analysis rendering.
+  panel.hidden = document.querySelector('[data-tab="insights"]')?.classList.contains("is-active") !== true;
   const counts=new Map();
   entries.forEach(meal=>ingredientNames(meal).forEach(name=>{
     if(!isCookingWater(name)) counts.set(name,(counts.get(name)||0)+1);
@@ -1411,7 +1413,7 @@ function resetTwoWeeks() {
   try { localStorage.removeItem(TRACKING_KEY); } catch {}
   weekPurchases=[new Map(),new Map()];weekLeftovers=[new Map(),new Map()];
   $('ingredient-input').value='';$('two-week-calendar').replaceChildren();$('grocery-list').replaceChildren();
-  $('plan-analysis').hidden=true;setStatus('Choose ingredients and generate your two-week plan.');
+  renderTwoWeekInsights();setStatus('Choose ingredients and generate your two-week plan.');
 }
 for(let w=1;w<=2;w++){$(`week-${w}-unique`).addEventListener('change',()=>setupCounts(w));setupCounts(w);}
 $('find-recipes').addEventListener('click',()=>generateTwoWeeks(false));

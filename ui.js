@@ -10,7 +10,12 @@
       const w=tab==='week1'?'1':'2';calendar.dataset.activeWeek=w;
       document.getElementById('calendar-heading').innerHTML='Week '+w+' <span class="subtle-heading">· Your meal calendar</span>';
     }
-    if(tab==='insights' && typeof renderTwoWeekInsights==='function')renderTwoWeekInsights();
+    if(tab==='insights'){
+      const insights=document.getElementById('plan-analysis');
+      if(insights) insights.hidden=false;
+      if(typeof renderTwoWeekInsights==='function')renderTwoWeekInsights();
+      if(insights) insights.hidden=false;
+    }
   }
   tabs.forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
   const observer=new MutationObserver(()=>{if(calendar.children.length && document.querySelector('[data-panel="plan"]:not([hidden])'))showTab('week1')});
