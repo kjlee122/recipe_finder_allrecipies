@@ -215,8 +215,8 @@ async function loadRecipeDatabase() {
 }
 
 function recipeEligible(meal) {
-  const title = meal.title.toLowerCase();
-  if (/\b(cake|cookie|brownie|cupcake|frosting|pudding|cocktail|smoothie|eggnog|muffin|pie crust|jam|jelly|lemonade|punch|ice cream|bread pudding)\b/.test(title)) return false;
+  // Conservative categories: ambiguous recipes are excluded until reviewed.
+  if (meal.category !== "main") return false;
   if (!meal.ingredients || meal.ingredients.length < 4 || meal.ingredients.length > 16) return false;
   if (meal.totalTime && meal.totalTime > 90) return false;
   return true;
@@ -237,7 +237,7 @@ async function buildRecipePool(ingredients, limit) {
     ...x.meal,
     idMeal: x.meal.id,
     strMeal: x.meal.title,
-    strCategory: x.meal.title.toLowerCase().split(/\s+/)[0]
+    strCategory: x.meal.category
   }));
 }
 
@@ -1049,6 +1049,8 @@ function renderPlanAnalysis() {
 // Two-week planner: each recipe is cooked once per week and portioned for repeat meals.
 let plans = [[], []];
 let schedules = [[], []];
+let mealStatuses = [Array(14).fill("pending"), Array(14).fill("pending")];
+const TRACKING_KEY = "meal-planner-two-week-progress-v1";
 let weekPools = [[], []];
 let weekPurchases = [new Map(), new Map()];
 let weekLeftovers = [new Map(), new Map()];
@@ -1142,51 +1144,130 @@ function selectWeek(pool,counts,inventory,usedIds=new Set()) {
   }
   return selected;
 }
-// Place cooking events early enough for each meal's remaining servings.
-// Prepared leftovers are used within 3 days; freeze portions when needed.
+// Suggested calendar only: users can freely choose when to eat each meal.
+// A recipe can be scheduled up to its planned number of servings.
 function makeSchedule(plan) {
-  const slots=Array(14).fill(null);
-  const remaining=plan.map(x=>x.count);
-  const cooked=plan.map(()=>-1);
-  for(let i=0;i<14;i++) {
-    const options=plan.map((x,j)=>({j,remaining:remaining[j],cooked:cooked[j]})).filter(x=>x.remaining>0);
-    if(!options.length) break;
-    // Prefer existing safe leftovers, otherwise start a new batch.
-    let choice=options.filter(x=>x.cooked>=0 && i-x.cooked<=6)
-      .sort((a,b)=>a.cooked-b.cooked)[0];
-    if(!choice) choice=options.filter(x=>x.cooked<0).sort((a,b)=>b.remaining-a.remaining)[0];
-    if(!choice) choice=options[0];
-    const j=choice.j; const cook=cooked[j]<0;
-    if(cook) cooked[j]=i;
-    const frozen=!cook && i-cooked[j]>6;
-    slots[i]={meal:plan[j].meal,kind:cook?'Cook':frozen?'Frozen portion':'Leftover',count:plan[j].count};
-    remaining[j]--;
+  const slots = Array(14).fill(null);
+  let cursor = 0;
+  // Spread first cooking events across the week, then fill suggested repeats.
+  for (let j = 0; j < plan.length && cursor < 14; j++) {
+    slots[cursor] = j;
+    cursor += Math.max(1, Math.floor(14 / Math.max(plan.length, 1)));
+  }
+  const remaining = plan.map((x,j) => x.count - slots.filter(v => v === j).length);
+  for (let i = 0; i < 14; i++) {
+    if (slots[i] !== null) continue;
+    const choices = plan.map((_,j) => j).filter(j => remaining[j] > 0);
+    if (!choices.length) break;
+    const choice = choices.sort((a,b) => {
+      const lastA = slots.lastIndexOf(a, i-1), lastB = slots.lastIndexOf(b, i-1);
+      return (lastB >= 0 ? lastB : -100) - (lastA >= 0 ? lastA : -100);
+    })[0];
+    slots[i] = choice; remaining[choice]--;
   }
   return slots;
 }
+function assignedCount(week, recipeIndex, schedule = schedules[week], statuses = mealStatuses[week]) {
+  return schedule.filter((value, index) => value === recipeIndex && statuses[index] !== 'skipped').length;
+}
+function saveProgress() {
+  try {
+    localStorage.setItem(TRACKING_KEY, JSON.stringify({
+      plans: plans.map(week => week.map(x => ({id: x.meal.idMeal, count:x.count}))),
+      schedules, mealStatuses
+    }));
+  } catch (error) { console.warn('Could not save meal progress', error); }
+}
+function updateCalendarSlot(week, index, value) {
+  if (mealStatuses[week][index] === 'eaten') {
+    setStatus('Uncheck Eaten before changing this slot.'); renderCalendar(); return;
+  }
+  const next = value === '' ? null : Number(value);
+  const schedule = [...schedules[week]];
+  schedule[index] = next;
+  const statuses = [...mealStatuses[week]];
+  statuses[index] = 'pending';
+  const over = plans[week].some((x,j) =>
+    schedule.filter((v,i) => v === j && statuses[i] !== 'skipped').length > x.count);
+  if (over) {
+    setStatus('All servings of that recipe are already allocated. Skip or move another serving first.');
+    renderCalendar(); return;
+  }
+  schedules[week] = schedule;
+  mealStatuses[week] = statuses;
+  saveProgress(); renderCalendar();
+  setStatus('Calendar updated. The shopping list is based on portions planned for cooking.');
+}
+function updateMealStatus(week,index, status) {
+  if (schedules[week][index] === null) return;
+  const previous = mealStatuses[week][index];
+  if (previous === status) return;
+  if (status !== 'skipped' && previous === 'skipped') {
+    const j=schedules[week][index];
+    if (assignedCount(week,j) >= plans[week][j].count) {
+      setStatus('No available servings remain for this recipe. Move another allocation first.');
+      renderCalendar(); return;
+    }
+  }
+  mealStatuses[week][index] = status;
+  saveProgress(); renderCalendar();
+  setStatus(status === 'skipped' ? 'Meal skipped: its portion is still available to schedule elsewhere.' :
+    status === 'eaten' ? 'Meal marked eaten. Remaining portions updated.' : 'Meal returned to pending.');
+}
 function renderCalendar() {
-  const host=$('two-week-calendar');host.replaceChildren();
-  for(let w=0;w<2;w++) {
-    const section=document.createElement('section');
-    const title=document.createElement('h3');title.textContent=`Week ${w+1}`;section.append(title);
-    const table=document.createElement('table');table.className='calendar-table';
-    const header=document.createElement('tr');
-    for(const name of ['Day','Lunch','Dinner']) {const th=document.createElement('th');th.textContent=name;header.append(th);}table.append(header);
-    DAYS.forEach((day,d)=>{
-      const tr=document.createElement('tr');const th=document.createElement('th');th.textContent=day;tr.append(th);
-      for(let t=0;t<2;t++) {
-        const td=document.createElement('td');const entry=schedules[w][d*2+t];
-        if(entry) {
-          const strong=document.createElement('strong');strong.textContent=entry.meal.strMeal;td.append(strong);
-          const note=document.createElement('div');note.textContent=entry.kind;td.append(note);
-          const link=document.createElement('a');link.href=entry.meal.url;link.target='_blank';link.rel='noopener noreferrer';link.textContent='View recipe';td.append(link);
-        } else {td.textContent='Unplanned — gap';td.className='meal-gap';}
+  const host = $('two-week-calendar'); host.replaceChildren();
+  for (let w = 0; w < 2; w++) {
+    const section = document.createElement('section');
+    const title = document.createElement('h3'); title.textContent = `Week ${w+1}`; section.append(title);
+    const intro = document.createElement('p');
+    intro.textContent = 'Choose your meals and mark each one Eaten, Not yet, or Skipped. A skipped portion becomes available to assign elsewhere. Cooking and storage are suggestions.';
+    section.append(intro);
+    const table = document.createElement('table'); table.className = 'calendar-table';
+    const header = document.createElement('tr');
+    for (const name of ['Day','Lunch','Dinner']) { const th=document.createElement('th');th.textContent=name;header.append(th); }
+    table.append(header);
+    DAYS.forEach((day,d) => {
+      const tr = document.createElement('tr'); const th=document.createElement('th');th.textContent=day;tr.append(th);
+      for (let t=0;t<2;t++) {
+        const i=d*2+t, td=document.createElement('td'), chosen=schedules[w][i], status=mealStatuses[w][i];
+        const select=document.createElement('select'); select.setAttribute('aria-label',`${day} ${SLOT_NAMES[t]} week ${w+1}`);
+        const blank=document.createElement('option');blank.value='';blank.textContent='Unplanned';select.append(blank);
+        plans[w].forEach((entry,j)=>{const opt=document.createElement('option');opt.value=String(j);opt.textContent=entry.meal.strMeal;select.append(opt);});
+        select.value=chosen === null ? '' : String(chosen);
+        select.disabled=status==='eaten';
+        select.addEventListener('change',()=>updateCalendarSlot(w,i,select.value));td.append(select);
+        if (chosen !== null) {
+          const first=schedules[w].findIndex((v,k)=>v===chosen && mealStatuses[w][k]!=='skipped')===i;
+          const note=document.createElement('div');note.textContent=first?'Suggested cook / prepare':'Portion — refrigerate or freeze safely';td.append(note);
+          const controls=document.createElement('div');controls.className='meal-tracking';
+          const statusLabel=document.createElement('label');statusLabel.textContent='Status: ';
+          const statusSelect=document.createElement('select');statusSelect.setAttribute('aria-label',`${day} ${SLOT_NAMES[t]} meal status`);
+          [['pending','Not yet'],['eaten','Eaten ✓'],['skipped','Skipped / ate out']].forEach(([value,label])=>{
+            const option=document.createElement('option');option.value=value;option.textContent=label;statusSelect.append(option);
+          });
+          statusSelect.value=status;
+          statusSelect.addEventListener('change',()=>updateMealStatus(w,i,statusSelect.value));
+          statusLabel.append(statusSelect);controls.append(statusLabel);td.append(controls);
+          const link=document.createElement('a');link.href=plans[w][chosen].meal.url;link.target='_blank';link.rel='noopener noreferrer';link.textContent='View recipe';td.append(link);
+          if(status==='skipped')td.classList.add('meal-skipped');
+          if(status==='eaten')td.classList.add('meal-eaten');
+        } else td.className='meal-gap';
         tr.append(td);
-      }table.append(tr);
+      } table.append(tr);
     });section.append(table);
-    const total=plans[w].reduce((n,x)=>n+x.count,0);
-    const summary=document.createElement('p');summary.textContent=`${plans[w].length} unique meals · ${total}/14 slots covered · ${14-total} gaps · ${plans[w].length} cooking sessions`;
-    section.append(summary);host.append(section);
+    const eaten=mealStatuses[w].filter((x,i)=>x==='eaten'&&schedules[w][i]!==null).length;
+    const skipped=mealStatuses[w].filter((x,i)=>x==='skipped'&&schedules[w][i]!==null).length;
+    const assigned=schedules[w].filter((x,i)=>x!==null&&mealStatuses[w][i]!=='skipped').length;
+    const remaining=plans[w].map((x,j)=>x.count-schedules[w].filter((v,i)=>v===j&&mealStatuses[w][i]==='eaten').length);
+    const unallocated=plans[w].map((x,j)=>x.count-assignedCount(w,j));
+    const summary=document.createElement('p');
+    summary.textContent=`${eaten} eaten · ${remaining.reduce((a,b)=>a+b,0)} portions not eaten · ${skipped} skipped slots · ${14-assigned} open or skipped slots · ${unallocated.reduce((a,b)=>a+b,0)} servings available to schedule`;
+    section.append(summary);
+    const list=document.createElement('ul');list.className='remaining-servings';
+    plans[w].forEach((x,j)=>{
+      const li=document.createElement('li');li.textContent=`${x.meal.strMeal}: ${remaining[j]} not eaten (${unallocated[j]} available to schedule)`;list.append(li);
+    });section.append(list);
+    host.append(section);
   }
 }
 function renderShopping() {
@@ -1219,7 +1300,7 @@ async function generateTwoWeeks(random=false) {
     const first=buyForWeek(plans[0],new Map());weekPurchases[0]=first.purchases;weekLeftovers[0]=first.remaining;
     plans[1]=selectWeek(valid,counts[1],first.remaining,new Set(plans[0].map(x=>x.meal.idMeal)));
     const second=buyForWeek(plans[1],first.remaining);weekPurchases[1]=second.purchases;weekLeftovers[1]=second.remaining;
-    schedules=plans.map(makeSchedule);renderCalendar();renderShopping();
+    schedules=plans.map(makeSchedule);mealStatuses=[Array(14).fill("pending"),Array(14).fill("pending")];saveProgress();renderCalendar();renderShopping();
     $('plan-analysis').hidden=true;
     setStatus(`Two weeks ready. Week 1: ${plans[0].reduce((n,x)=>n+x.count,0)} meals; Week 2: ${plans[1].reduce((n,x)=>n+x.count,0)} meals. Grocery amounts are estimates.`);
   }catch(error){console.error(error);setStatus(error.message||'Unable to generate plan.');}
@@ -1227,7 +1308,9 @@ async function generateTwoWeeks(random=false) {
 }
 function resetTwoWeeks() {
   if(isGenerating)return;
-  plans=[[],[]];schedules=[[],[]];weekPurchases=[new Map(),new Map()];weekLeftovers=[new Map(),new Map()];
+  plans=[[],[]];schedules=[[],[]];mealStatuses=[Array(14).fill("pending"),Array(14).fill("pending")];
+  try { localStorage.removeItem(TRACKING_KEY); } catch {}
+  weekPurchases=[new Map(),new Map()];weekLeftovers=[new Map(),new Map()];
   $('ingredient-input').value='';$('two-week-calendar').replaceChildren();$('grocery-list').replaceChildren();
   $('plan-analysis').hidden=true;setStatus('Choose ingredients and generate your two-week plan.');
 }
@@ -1235,3 +1318,24 @@ for(let w=1;w<=2;w++){$(`week-${w}-unique`).addEventListener('change',()=>setupC
 $('find-recipes').addEventListener('click',()=>generateTwoWeeks(false));
 $('random-week').addEventListener('click',()=>generateTwoWeeks(true));
 $('reset-button').addEventListener('click',resetTwoWeeks);
+
+// Restore a previously generated plan when the page reloads.
+(async function restoreMealProgress() {
+  try {
+    const saved=JSON.parse(localStorage.getItem(TRACKING_KEY)||'null');
+    if(!saved || !Array.isArray(saved.plans) || !Array.isArray(saved.schedules))return;
+    const pool=await loadRecipeDatabase();
+    const byId=new Map(pool.map(m=>[String(m.id),{...m,idMeal:m.id,strMeal:m.title,strCategory:m.category}]));
+    const restored=saved.plans.map(week=>week.map(x=>({meal:byId.get(String(x.id)),count:x.count})));
+    if(restored.length!==2 || restored.some(week=>week.some(x=>!x.meal)))return;
+    plans=restored;
+    schedules=saved.schedules.map(a=>a.slice(0,14));
+    mealStatuses=(saved.mealStatuses||[]).map(a=>a.slice(0,14));
+    if(mealStatuses.length!==2 || mealStatuses.some(a=>a.length!==14))mealStatuses=[Array(14).fill('pending'),Array(14).fill('pending')];
+    unknownQuantities=new Set();
+    const first=buyForWeek(plans[0],new Map());weekPurchases[0]=first.purchases;weekLeftovers[0]=first.remaining;
+    const second=buyForWeek(plans[1],first.remaining);weekPurchases[1]=second.purchases;weekLeftovers[1]=second.remaining;
+    renderCalendar();renderShopping();
+    setStatus('Your saved meal schedule and eaten/skipped progress were restored.');
+  } catch(error) { console.warn('Unable to restore saved meal plan',error); }
+})();

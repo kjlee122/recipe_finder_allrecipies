@@ -13,3 +13,13 @@
 .calendar-table td div { font-size:.85em;color:#555;margin:.3rem 0; }
 .calendar-table td a { font-size:.85em; }
 .calendar-table .meal-gap { background:#f7f3ec;color:#6d6257; }
+
+.calendar-table select { width:100%; max-width:280px; padding:.45rem; border:1px solid #aaa; border-radius:5px; background:white; }
+.calendar-table td { min-width:180px; }
+.calendar-table td.meal-gap { background:#f7f3ec; }
+
+.meal-tracking { margin:.5rem 0; }
+.meal-tracking select { max-width:180px; margin-top:.25rem; }
+.calendar-table td.meal-eaten { background:#eaf6ee; }
+.calendar-table td.meal-skipped { background:#fff4df; }
+.remaining-servings { margin:.6rem 0 1.5rem; }
