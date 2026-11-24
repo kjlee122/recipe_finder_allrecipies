@@ -122,13 +122,36 @@ function isCookingWater(name) {
   );
 }
 
+// Reject standalone preparation notes, not ingredients with unknown amounts.
+const NON_INGREDIENT_LABELS = new Set([
+  "and", "or", "divided", "beaten", "lightly beaten", "well beaten",
+  "chopped", "finely chopped", "diced", "minced", "sliced", "shredded",
+  "drained", "rinsed", "peeled", "crushed", "melted", "softened",
+  "thawed", "cooled", "cooked", "uncooked", "optional", "to taste",
+  "as needed", "for serving", "for garnish", "garnish", "boneless",
+  "skinless", "room temperature", "divided use", "plus more", "extra",
+  "fresh", "dried", "large", "medium", "small", "about", "approximately"
+]);
+function isDescriptorOnly(value) {
+  const label = String(value || "").toLowerCase().trim()
+    .replace(/^[,;:()\s]+|[,;:()\s.]+$/g, "")
+    .replace(/\s+/g, " ");
+  return !label || NON_INGREDIENT_LABELS.has(label);
+}
+function cleanIngredientLabel(value) {
+  return String(value || "")
+    .replace(/(?:,|;)\s*(?:divided|beaten|chopped|diced|drained|rinsed|peeled|softened|melted|thawed|optional|to taste|for garnish|as needed).*$/i, "")
+    .replace(/\b(?:and|or)\s*$/i, "")
+    .replace(/\s+/g, " ").trim();
+}
+
 // ============================================
 // RECIPE INGREDIENTS
 // ============================================
 
 function getIngredients(meal) {
   if (ingredientCache.has(meal)) return ingredientCache.get(meal);
-  const items = (meal.ingredients || []).filter(raw => !/^(?:and|or|divided|beaten|optional|boneless|skinless|chopped|diced|drained|rinsed)$/i.test(String(raw).trim())).map(raw => {
+  const items = (meal.ingredients || []).filter(raw => !isDescriptorOnly(raw)).map(raw => {
     // Preserve the original ingredient text for the grocery list.
     // Quantity parsing is best-effort; ambiguous entries remain unspecified.
     const match = raw.match(/^((?:\d+(?:\.\d+)?|[¼½¾⅓⅔⅛⅜⅝⅞]|\d+\/\d+)(?:\s+(?:\d+\/\d+))?\s*(?:(?:cups?|tsp|tbsp|tablespoons?|teaspoons?|ounces?|oz|lbs?|pounds?|grams?|g|kg|ml|liters?|cloves?|cans?|packages?|slices?|pieces?)\b)?)/i);
@@ -142,8 +165,9 @@ function getIngredients(meal) {
     // For entries like '1 (15 ounce) can beans', retain the full text
     // rather than inventing a numerical quantity.
     if (!name || /^(?:can|package|cup|tablespoon|teaspoon)\s/i.test(name)) name = raw;
+    name = cleanIngredientLabel(name);
     return {name: normalizeIngredient(name), measure, original: raw};
-  }).filter(x => x.name);
+  }).filter(x => x.name && !isDescriptorOnly(x.name));
   ingredientCache.set(meal, items);
   return items;
 }
@@ -1096,7 +1120,9 @@ function addRequirements(target,meal,servings,week) {
   for(const x of scaledRequirements(meal,servings)) {
     if(!x.quantity) {
       const source=getIngredients(meal).find(y=>y.name===x.name);
-      unknownQuantities.push({week, name:x.name, recipe:meal.strMeal, original:source?.original||x.name, servings});
+      if (!isDescriptorOnly(x.name) && !unknownQuantities.some(y=>y.week===week && y.name===x.name && y.recipe===meal.strMeal)) {
+        unknownQuantities.push({week, name:x.name, recipe:meal.strMeal, original:source?.original||x.name, servings});
+      }
       continue;
     }
     const key=keyFor(x.name,x.quantity);
@@ -1307,7 +1333,7 @@ function renderTwoWeekInsights(){
   // eligible candidate pool; report observed unique-ingredient counts only.
   if(!entries.length || insightCandidatePool.length<entries.length){
     $('random-count').textContent='Not available';
-    $('comparison-summary').textContent='Generate a plan to compare against random recipe selections.';
+    $('comparison-summary').textContent=entries.length?'Comparison unavailable until the eligible recipe pool loads.':'Generate a plan to compare against random recipe selections.';
     return;
   }
   const samples=200;let sum=0;
@@ -1375,7 +1401,6 @@ async function generateTwoWeeks(random=false) {
     plans[1]=selectWeek(valid,counts[1],first.remaining,new Set(plans[0].map(x=>x.meal.idMeal)));
     const second=buyForWeek(plans[1],first.remaining,2);weekPurchases[1]=second.purchases;weekLeftovers[1]=second.remaining;
     schedules=plans.map(makeSchedule);mealStatuses=[Array(14).fill("pending"),Array(14).fill("pending")];saveProgress();renderCalendar();renderShopping();renderTwoWeekInsights();
-    $('plan-analysis').hidden=true;
     setStatus(`Two weeks ready. Week 1: ${plans[0].reduce((n,x)=>n+x.count,0)} meals; Week 2: ${plans[1].reduce((n,x)=>n+x.count,0)} meals. Grocery amounts are estimates.`);
   }catch(error){console.error(error);setStatus(error.message||'Unable to generate plan.');}
   finally{isGenerating=false;$('find-recipes').disabled=false;$('random-week').disabled=false;}
@@ -1409,6 +1434,7 @@ $('reset-button').addEventListener('click',resetTwoWeeks);
     unknownQuantities=[];
     const first=buyForWeek(plans[0],new Map(),1);weekPurchases[0]=first.purchases;weekLeftovers[0]=first.remaining;
     const second=buyForWeek(plans[1],first.remaining,2);weekPurchases[1]=second.purchases;weekLeftovers[1]=second.remaining;
+    insightCandidatePool=pool.filter(recipeEligible).map(m=>({...m,idMeal:m.id,strMeal:m.title,strCategory:m.category}));
     renderCalendar();renderShopping();renderTwoWeekInsights();
     setStatus('Your saved meal schedule and eaten/skipped progress were restored.');
   } catch(error) { console.warn('Unable to restore saved meal plan',error); }
