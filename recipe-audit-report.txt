@@ -1,0 +1,29 @@
+RECIPE DATASET AUDIT
+Source: prior 12,512-entry Allrecipes-derived recipes.json
+Approach: conservative title-based screening; not a manual verification.
+
+Input records: 12512
+Eligible lunch/dinner recipes: 2145
+Excluded records: 10367
+
+Excluded by reason:
+- uncategorized: 3161
+- dessert: 2452
+- ingredient_count_or_time: 1951
+- component: 1027
+- side: 810
+- breakfast: 622
+- beverage: 344
+
+Sample exclusions:
+dessert: Chewy Whole Wheat Peanut Butter Brownies | Pumpkin Pie Eggnog | Polish Poppy Seed Cake | No-Bake Tiramisu Cheesecake | Nana Bessie's Whoopie Pies | Air Fryer Apple Cider Donut Bites | No-Crust Strawberry Pie | The Best Brownies | Fresh Strawberry Cookies | Melted Snowman Cookies | Lemon Brownies | Polish Cream Cheese Coffee Cake
+component: Eggs Poached in Tomato Sauce | Royal Icing | Cream Cheese Frosting | Bob's Teriyaki Sauce and Marinade | Pasta Primavera with Lemon Caper Sauce | Hamburger Steak with Onions and Gravy | Creamy Coleslaw Dressing | Smoked Fish Dip | Soft Pretzel Sticks with Honey Mustard Dipping Sauce | Stephen's Pizza Dough | Homemade Red Wine Vinaigrette | Chicken Artichoke Dip
+ingredient_count_or_time: Yummy Stuffed Peppers | Chicken Andouille Gumbo | Sweet Pork for Burritos | Chef John's Buttermilk Fried Chicken | Tomato Gorgonzola Soup | Shrimp Ceviche Baja Style | Fruity Chili Recipe | Cheesy Vegetable Lasagna | My Chicken Parmesan | Lime Pear Gelatin Salad | Lemony Garlic Shrimp with Pasta | Mom Sykes' Hungarian Goulash
+uncategorized: Prime Rib Our Way | Chef John's Almond Biscotti | Quince Empanadas | Caramel Corn I | Ras Malai | Torta Caprese (Italian Flourless Chocolate Torte) | Dutch Babies | Lamb Loaf | Crawfish-Stuffed Jalapenos | Lime Fluff | Bacon on the Grill | White Chocolate Flan
+breakfast: Berry Overnight Oats | Scottish Oat Scones | Breakfast Egg Muffins | Spiced Apple Topping for Pancakes | Crispy Rolled Breakfast Burrito | Raspberry Oatmeal Bars | Migas Breakfast Tacos | Easiest Peanut Butter Granola Ever | Bulk Venison Breakfast Sausage | Savory Zucchini Muffins | French Toast | Paleo Granola
+side: Grilled Garlic Bread | Cream Cheese Mashed Potatoes | South African Potato Salad | Sweet Restaurant Slaw | Easy 7-Up Biscuits | Monkey Bread with a Twist | Peanut Butter and Banana Dog Biscuits | Chef John's No-Knead Pumpkin Bread | Cracked Wheat Bread | Caprese Grilled Bread | Mango Cilantro Slaw | Mom's Dill Potato Salad
+beverage: Peanut Butter Banana Smoothie | Beer Margaritas | Orange, Tea, Bourbon-Brined Paprika Butter Turkey | Blueberry Smoothie | Party Punch | Fruit and Yogurt Smoothie | Beet Smoothie | Nanny's Newfoundland Tea Biscuits | Warm and Spicy Autumn Punch | Easy Berry Sangria | Sugar Free Eggnog | White Wine Sangria
+
+Caveats: The source lacks verified course/category labels. Rules can misclassify dishes; a manual review of retained titles is recommended.
+Ingredient quantities, links and serving counts were not modified.
+The JSON now contains eligible recipes only; the original dataset remains available in the previous ZIP.
