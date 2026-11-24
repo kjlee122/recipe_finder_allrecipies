@@ -1,0 +1,180 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+  <title>Weekly Meal Planner</title>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <header>
+    <h1>Weekly Meal Planner</h1>
+
+    <p>
+      Plan your meals, reuse ingredients,
+      and reduce food waste!
+    </p>
+  </header>
+
+  <main>
+
+    <!-- INGREDIENT SELECTION -->
+
+    <section id="ingredient-selection">
+
+      <h2>Choose Your Ingredients</h2>
+
+      <p>
+        Enter ingredients you would like to include
+        in your meals, separated by commas.
+      </p>
+
+      <label for="ingredient-input">
+        Preferred Ingredients:
+      </label>
+
+      <input
+        type="text"
+        id="ingredient-input"
+        placeholder="e.g. chicken, rice, onion"
+      >
+
+      <div class="button-group">
+
+        <button
+          type="button"
+          id="find-recipes">
+          Generate Week
+        </button>
+
+        <button
+          type="button"
+          id="random-week">
+          Random Week
+        </button>
+
+        <button
+          type="button"
+          id="reset-button">
+          Reset
+        </button>
+
+      </div>
+
+      <p id="status" role="status" aria-live="polite"></p>
+
+    </section>
+
+
+    <!-- WEEKLY MEAL PLAN -->
+
+    <section id="weekly-plan">
+
+      <h2>Your Weekly Meal Plan</h2>
+
+      <p>
+        Your meals are selected to share ingredients
+        while providing variety throughout the week.
+      </p>
+
+      <div id="recipe-results">
+        <!-- JavaScript generates meal cards here -->
+      </div>
+
+    </section>
+
+<section id="plan-analysis" hidden>
+  <h2>Weekly Plan Analysis</h2>
+
+  <p>
+    See how your optimized meal plan compares
+    with randomly selected meals.
+  </p>
+
+  <div class="analysis-grid">
+    <div class="analysis-card">
+      <h3>Ingredient Reuse</h3>
+      <p id="reuse-percentage">—</p>
+      <small>Ingredients used in multiple meals</small>
+    </div>
+
+    <div class="analysis-card">
+      <h3>Unique Ingredients</h3>
+      <p id="unique-ingredients">—</p>
+      <small>Across the entire week</small>
+    </div>
+
+    <div class="analysis-card">
+      <h3>Reused Ingredients</h3>
+      <p id="reused-ingredients">—</p>
+      <small>Used in two or more recipes</small>
+    </div>
+
+    <div class="analysis-card">
+      <h3>Estimated Package Leftovers</h3>
+      <p id="package-leftovers">—</p>
+      <small>For ingredients with known package sizes</small>
+    </div>
+  </div>
+
+  <div class="comparison-results">
+    <h3>Optimized vs. Random Meal Plans</h3>
+
+    <div class="comparison-row">
+      <span>Optimized plan</span>
+      <strong id="optimized-count">—</strong>
+    </div>
+
+    <div class="comparison-row">
+      <span>Average random plan</span>
+      <strong id="random-count">—</strong>
+    </div>
+
+    <p id="comparison-summary"></p>
+  </div>
+</section>
+
+
+    <!-- GROCERY LIST -->
+
+    <section id="grocery-section">
+
+      <h2>Your Grocery List</h2>
+
+      <p>
+        Ingredients from your weekly meals
+        will appear here automatically.
+      </p>
+
+      <ul id="grocery-list">
+        <!-- JavaScript generates grocery items here -->
+      </ul>
+
+    </section>
+
+  </main>
+
+
+  <footer>
+    <p>
+      Weekly Meal Planner |
+      Recipe links from Allrecipes
+    </p>
+  </footer>
+
+
+  <!-- JAVASCRIPT -->
+
+  <script src="ingredients.js"></script>
+  <script src="script.js"></script>
+
+</body>
+</html>
