@@ -1054,7 +1054,7 @@ const TRACKING_KEY = "meal-planner-two-week-progress-v1";
 let weekPools = [[], []];
 let weekPurchases = [new Map(), new Map()];
 let weekLeftovers = [new Map(), new Map()];
-let unknownQuantities = new Set();
+let unknownQuantities = [];
 const SLOT_NAMES = ["Lunch", "Dinner"];
 
 function requestedCounts(week) {
@@ -1091,18 +1091,22 @@ function scaledRequirements(meal, servings) {
   });
 }
 function keyFor(name,quantity) {return `${name}|${quantity.type}|${quantity.unit||''}`;}
-function addRequirements(target,meal,servings) {
+function addRequirements(target,meal,servings,week) {
   for(const x of scaledRequirements(meal,servings)) {
-    if(!x.quantity) {unknownQuantities.add(x.name);continue;}
+    if(!x.quantity) {
+      const source=getIngredients(meal).find(y=>y.name===x.name);
+      unknownQuantities.push({week, name:x.name, recipe:meal.strMeal, original:source?.original||x.name, servings});
+      continue;
+    }
     const key=keyFor(x.name,x.quantity);
     const existing=target.get(key);
     if(existing) existing.amount+=x.quantity.amount;
     else target.set(key,{...x.quantity,name:x.name});
   }
 }
-function buyForWeek(plan,inventory) {
+function buyForWeek(plan,inventory,week) {
   const required=new Map();
-  for(const x of plan) addRequirements(required,x.meal,x.count);
+  for(const x of plan) addRequirements(required,x.meal,x.count,week);
   const purchases=new Map(); const remaining=new Map(inventory);
   for(const [key,need] of required) {
     const stock=remaining.get(key)?.amount||0;
@@ -1285,7 +1289,29 @@ function renderShopping() {
     if(!ul.children.length){const line=document.createElement('li');line.textContent='No measured purchases needed';ul.append(line);}
     li.append(ul);host.append(li);
   }
-  const note=document.createElement('li');note.textContent=`Quantity estimates exclude ${unknownQuantities.size} ingredients with missing or unrecognized measurements. Check original recipes before shopping.`;host.append(note);
+  const panel=$('unspecified-quantities');
+  if(panel){
+    panel.replaceChildren();
+    const heading=document.createElement('h3');heading.textContent=`Unspecified quantities (${unknownQuantities.length})`;panel.append(heading);
+    const description=document.createElement('p');description.textContent='These ingredients are still included in your meals and shopping checklist. Their amounts cannot be calculated reliably, so check the linked recipe before shopping.';panel.append(description);
+    if(!unknownQuantities.length){const empty=document.createElement('p');empty.textContent='All ingredient quantities were recognized.';panel.append(empty);}
+    for(const week of [1,2]){
+      const items=unknownQuantities.filter(x=>x.week===week);
+      if(!items.length)continue;
+      const details=document.createElement('details');details.open=true;
+      const summary=document.createElement('summary');summary.textContent=`Week ${week} · ${items.length} ingredient entries`;details.append(summary);
+      const list=document.createElement('ul');list.className='unknown-list';
+      for(const item of items){
+        const li=document.createElement('li');
+        const check=document.createElement('input');check.type='checkbox';check.setAttribute('aria-label',`Purchased ${item.name} for ${item.recipe}`);
+        const content=document.createElement('span');
+        const strong=document.createElement('strong');strong.textContent=item.name;
+        const recipe=document.createElement('small');recipe.textContent=`${item.recipe} · ${item.servings} planned serving(s) · Original: ${item.original}`;
+        content.append(strong,recipe);li.append(check,content);list.append(li);
+      }
+      details.append(list);panel.append(details);
+    }
+  }
 }
 async function generateTwoWeeks(random=false) {
   if(isGenerating)return;
@@ -1299,11 +1325,11 @@ async function generateTwoWeeks(random=false) {
     const pool=await buildRecipePool(requested,120);
     const valid=pool.filter(m=>Number.isInteger(m.servings)&&m.servings>0&&m.servings<=100);
     if(valid.length<counts[0].length+counts[1].length)throw Error('Not enough recipes with serving counts.');
-    preferredIngredients=requested;unknownQuantities=new Set();
+    preferredIngredients=requested;unknownQuantities=[];
     plans[0]=selectWeek(valid,counts[0],new Map());
-    const first=buyForWeek(plans[0],new Map());weekPurchases[0]=first.purchases;weekLeftovers[0]=first.remaining;
+    const first=buyForWeek(plans[0],new Map(),1);weekPurchases[0]=first.purchases;weekLeftovers[0]=first.remaining;
     plans[1]=selectWeek(valid,counts[1],first.remaining,new Set(plans[0].map(x=>x.meal.idMeal)));
-    const second=buyForWeek(plans[1],first.remaining);weekPurchases[1]=second.purchases;weekLeftovers[1]=second.remaining;
+    const second=buyForWeek(plans[1],first.remaining,2);weekPurchases[1]=second.purchases;weekLeftovers[1]=second.remaining;
     schedules=plans.map(makeSchedule);mealStatuses=[Array(14).fill("pending"),Array(14).fill("pending")];saveProgress();renderCalendar();renderShopping();
     $('plan-analysis').hidden=true;
     setStatus(`Two weeks ready. Week 1: ${plans[0].reduce((n,x)=>n+x.count,0)} meals; Week 2: ${plans[1].reduce((n,x)=>n+x.count,0)} meals. Grocery amounts are estimates.`);
@@ -1336,9 +1362,9 @@ $('reset-button').addEventListener('click',resetTwoWeeks);
     schedules=saved.schedules.map(a=>a.slice(0,14));
     mealStatuses=(saved.mealStatuses||[]).map(a=>a.slice(0,14));
     if(mealStatuses.length!==2 || mealStatuses.some(a=>a.length!==14))mealStatuses=[Array(14).fill('pending'),Array(14).fill('pending')];
-    unknownQuantities=new Set();
-    const first=buyForWeek(plans[0],new Map());weekPurchases[0]=first.purchases;weekLeftovers[0]=first.remaining;
-    const second=buyForWeek(plans[1],first.remaining);weekPurchases[1]=second.purchases;weekLeftovers[1]=second.remaining;
+    unknownQuantities=[];
+    const first=buyForWeek(plans[0],new Map(),1);weekPurchases[0]=first.purchases;weekLeftovers[0]=first.remaining;
+    const second=buyForWeek(plans[1],first.remaining,2);weekPurchases[1]=second.purchases;weekLeftovers[1]=second.remaining;
     renderCalendar();renderShopping();
     setStatus('Your saved meal schedule and eaten/skipped progress were restored.');
   } catch(error) { console.warn('Unable to restore saved meal plan',error); }

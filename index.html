@@ -8,7 +8,7 @@
   <meta name="viewport"
         content="width=device-width, initial-scale=1.0">
 
-  <title>Weekly Meal Planner</title>
+  <title>Little Plate · Meal Planner</title>
 
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="two-week.css">
@@ -17,11 +17,11 @@
 <body>
 
   <header>
-    <h1>Weekly Meal Planner</h1>
+    <div class="eyebrow">✿ A little less waste, a little more delicious</div>
+    <h1>Little Plate <span>♡</span></h1>
 
     <p>
-      Plan your meals, reuse ingredients,
-      and reduce food waste!
+      A cozy two-week plan for one, with less waste and more flexibility.
     </p>
   </header>
 
@@ -29,9 +29,9 @@
 
     <!-- INGREDIENT SELECTION -->
 
-    <section id="ingredient-selection">
+    <section id="ingredient-selection" class="planner-card">
 
-      <h2>Choose Your Ingredients</h2>
+      <h2>Let’s plan your meals <span class="heading-flower">✿</span></h2>
 
       <p>
         Enter ingredients you would like to include
@@ -88,9 +88,9 @@
 
     <!-- WEEKLY MEAL PLAN -->
 
-    <section id="weekly-plan">
+    <section id="weekly-plan" class="planner-card">
 
-      <h2>Your Two-Week Meal Calendar</h2>
+      <h2>Your meal calendar <span class="heading-flower">♡</span></h2>
 
       <p>
         Use the suggested schedule as a starting point. Choose your own lunch and dinner days, and see open slots and unassigned servings.
@@ -157,9 +157,9 @@
 
     <!-- GROCERY LIST -->
 
-    <section id="grocery-section">
+    <section id="grocery-section" class="planner-card">
 
-      <h2>Your Grocery List</h2>
+      <h2>Shopping basket <span class="heading-flower">✿</span></h2>
 
       <p>
         Estimated purchases are separated by week; Week 2 uses measured leftovers from Week 1.
@@ -168,6 +168,7 @@
       <ul id="grocery-list">
         <!-- JavaScript generates grocery items here -->
       </ul>
+      <div id="unspecified-quantities" class="unspecified-panel" aria-live="polite"></div>
 
     </section>
 

@@ -23,3 +23,58 @@
 .calendar-table td.meal-eaten { background:#eaf6ee; }
 .calendar-table td.meal-skipped { background:#fff4df; }
 .remaining-servings { margin:.6rem 0 1.5rem; }
+
+/* Little Plate: soft, readable, mobile-friendly design */
+:root{--lp-bg:#fff9f5;--lp-card:#fff;--lp-ink:#473b41;--lp-muted:#756a70;--lp-rose:#d97791;--lp-rose-soft:#fff0f3;--lp-sage:#638d76;--lp-border:#f0dfe3;--lp-shadow:0 10px 30px rgba(113,72,88,.08)}
+body{background:var(--lp-bg)!important;color:var(--lp-ink)!important;font-family:ui-rounded,"Avenir Next",Avenir,system-ui,sans-serif!important;line-height:1.55}
+header{background:linear-gradient(130deg,#ffe9ef,#fff5df)!important;color:var(--lp-ink)!important;text-align:center;padding:3.3rem 1.25rem!important;border-radius:0 0 34px 34px}
+header h1{font-size:clamp(2.2rem,5vw,3.5rem);letter-spacing:-.045em;margin:.3rem 0!important;color:#78495d!important}
+header h1 span,.heading-flower{color:var(--lp-rose)}
+header p{max-width:570px;margin:.4rem auto!important;color:#775f69!important}
+.eyebrow{text-transform:uppercase;letter-spacing:.13em;font-size:.74rem;font-weight:750;color:#a45d78}
+main{max-width:1150px!important;margin:1.6rem auto!important;padding:0 1rem!important;display:grid;gap:1.35rem}
+.planner-card,#plan-analysis{background:var(--lp-card)!important;border:1px solid var(--lp-border)!important;border-radius:22px!important;padding:clamp(1rem,3vw,2rem)!important;box-shadow:var(--lp-shadow)!important;margin:0!important}
+section h2{color:#78495d!important;font-size:clamp(1.35rem,2.7vw,1.8rem)!important;margin:0 0 .55rem!important}
+section p{color:var(--lp-muted)}
+input,select,button{font:inherit}
+input[type=text],input[type=number],select{border:1px solid #e7cfd7!important;border-radius:12px!important;padding:.65rem .8rem!important;background:#fff!important;color:var(--lp-ink)!important;max-width:100%;box-sizing:border-box}
+#ingredient-input{width:100%;margin:.35rem 0 1rem}
+button{border-radius:999px!important;padding:.75rem 1.2rem!important;cursor:pointer;transition:transform .12s,box-shadow .12s}
+button:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 4px 12px #ad7b8a30}
+#find-recipes,#random-week{background:#bd6b87!important;color:white!important;border:0!important}
+#reset-button{background:#fff!important;color:#9b5971!important;border:1px solid #dfb9c7!important}
+.button-group{display:flex;flex-wrap:wrap;gap:.65rem}
+.week-controls{grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:1rem}
+.week-controls fieldset{border:1px solid var(--lp-border);background:#fffafc;border-radius:18px;padding:1.1rem;min-width:0}
+.week-controls legend{font-weight:750;color:#995b72;padding:0 .4rem}
+.week-controls select{margin:.45rem 0}
+.repeat-controls label{font-size:.9rem;gap:.8rem}
+.repeat-controls input{width:4.4rem}
+[id$='-coverage']{font-weight:650;color:var(--lp-sage)!important;background:#f0f8f2;border-radius:12px;padding:.6rem .8rem}
+#status:not(:empty){padding:.85rem 1rem;border-radius:12px;background:#fff0f3;color:#80465e}
+#two-week-calendar section{margin:1.25rem 0;padding:1.1rem;background:#fffafc;border:1px solid var(--lp-border);border-radius:18px;overflow-x:auto}
+#two-week-calendar section h3{color:#98576f;margin:.2rem 0}
+.calendar-table{border-collapse:separate;border-spacing:6px;min-width:570px}
+.calendar-table th{border:0!important;background:transparent;color:#7e6370;font-size:.88rem}
+.calendar-table td{background:white;border:1px solid #f0e0e6!important;border-radius:12px;padding:.7rem;min-width:175px}
+.calendar-table td.meal-gap{background:#f8f3f4!important}
+.calendar-table td.meal-eaten{background:#eff8f0!important}
+.calendar-table td.meal-skipped{background:#fff6e7!important}
+.calendar-table td div{color:#76656c}
+.calendar-table select{border-radius:10px!important;max-width:100%}
+.calendar-table a{display:inline-block;margin-top:.3rem;color:#a24f74;font-weight:650}
+.remaining-servings{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.5rem;padding:0;list-style:none}
+.remaining-servings li{background:white;border:1px solid var(--lp-border);border-radius:12px;padding:.8rem;font-size:.88rem}
+#grocery-list{list-style:none;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:1rem}
+#grocery-list>li{background:#fffafc;border:1px solid var(--lp-border);border-radius:16px;padding:1rem}
+#grocery-list ul{padding-left:1.1rem;margin-top:.7rem}
+#grocery-list li li{padding:.2rem 0}
+.unspecified-panel{margin-top:1.3rem;padding:1.1rem;border:1px solid #e9d7c8;background:#fffaf1;border-radius:18px}
+.unspecified-panel h3{margin:.1rem 0;color:#866246}
+.unspecified-panel details{background:white;border:1px solid #efdfd0;border-radius:12px;padding:.8rem;margin:.75rem 0}
+.unspecified-panel summary{cursor:pointer;font-weight:750}
+.unknown-list{list-style:none;padding:0;display:grid;gap:.55rem}
+.unknown-list li{display:flex;gap:.7rem;align-items:flex-start;padding:.5rem;border-bottom:1px solid #f3e9e0}
+.unknown-list small{display:block;color:#786a67;margin-top:.2rem;overflow-wrap:anywhere}
+footer{color:#8d7480!important;text-align:center;padding:1.5rem}
+@media(max-width:620px){header{padding:2rem 1rem!important}.planner-card{padding:1rem!important}.button-group button{flex:1 1 100%}.calendar-table{min-width:520px}.week-controls fieldset{padding:.75rem}}
