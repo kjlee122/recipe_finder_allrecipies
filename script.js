@@ -215,7 +215,7 @@ async function loadRecipeDatabase() {
 }
 
 function recipeEligible(meal) {
-  // Conservative categories: ambiguous recipes are excluded until reviewed.
+  // Only likely complete lunch/dinner dishes; exclude components and unknowns.
   if (meal.category !== "main") return false;
   if (!meal.ingredients || meal.ingredients.length < 4 || meal.ingredients.length > 16) return false;
   if (meal.totalTime && meal.totalTime > 90) return false;
@@ -237,7 +237,7 @@ async function buildRecipePool(ingredients, limit) {
     ...x.meal,
     idMeal: x.meal.id,
     strMeal: x.meal.title,
-    strCategory: x.meal.category
+    strCategory: x.meal.mealFamily
   }));
 }
 
@@ -1133,7 +1133,11 @@ function selectWeek(pool,counts,inventory,usedIds=new Set()) {
   const selected=[];
   const used=new Set(usedIds);
   for(const count of counts) {
-    const options=pool.filter(m=>!used.has(m.idMeal));
+    const currentFamilies = new Set(selected.map(x => x.meal.mealFamily));
+    const available = pool.filter(m => !used.has(m.idMeal));
+    // Favor different meal families, falling back only if the pool is narrow.
+    const diverse = available.filter(m => m.mealFamily !== 'other' && !currentFamilies.has(m.mealFamily));
+    const options = diverse.length ? diverse : available;
     if(!options.length) throw Error('Not enough distinct recipes for your requested plan.');
     const ranked=options.map(meal=>({meal,score:scoreRecipeSuitability(meal)+
       leftoverScore(meal,count,inventory)*7 + Math.random()*4 -
