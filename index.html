@@ -10,28 +10,34 @@
 
   <title>Little Plate · Meal Planner</title>
 
-  <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="two-week.css">
+  <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
   <header>
-    <div class="eyebrow">✿ A little less waste, a little more delicious</div>
-    <h1>Little Plate <span>♡</span></h1>
+    <div class="eyebrow">PLAN • COOK • ENJOY</div>
+    <h1>Little Plate</h1>
 
     <p>
-      A cozy two-week plan for one, with less waste and more flexibility.
+      Your two-week lunch and dinner companion.
     </p>
   </header>
 
+  <nav class="app-tabs" aria-label="Planner sections">
+    <button class="app-tab is-active" type="button" data-tab="plan">1. Plan</button>
+    <button class="app-tab" type="button" data-tab="calendar">2. Calendar</button>
+    <button class="app-tab" type="button" data-tab="groceries">3. Groceries</button>
+    <button class="app-tab" type="button" data-tab="insights">4. Insights</button>
+  </nav>
   <main>
 
     <!-- INGREDIENT SELECTION -->
 
-    <section id="ingredient-selection" class="planner-card">
+    <section id="ingredient-selection" class="planner-card app-panel" data-panel="plan">
 
-      <h2>Let’s plan your meals <span class="heading-flower">✿</span></h2>
+      <h2>Make your meal plan</h2>
 
       <p>
         Enter ingredients you would like to include
@@ -88,14 +94,18 @@
 
     <!-- WEEKLY MEAL PLAN -->
 
-    <section id="weekly-plan" class="planner-card">
+    <section id="weekly-plan" class="planner-card app-panel" data-panel="calendar" hidden>
 
-      <h2>Your meal calendar <span class="heading-flower">♡</span></h2>
+      <h2>Your calendar</h2>
 
       <p>
         Use the suggested schedule as a starting point. Choose your own lunch and dinner days, and see open slots and unassigned servings.
       </p>
 
+      <div class="week-switch" aria-label="Calendar week">
+        <button type="button" class="week-tab is-active" data-week="1">Week 1</button>
+        <button type="button" class="week-tab" data-week="2">Week 2</button>
+      </div>
       <div id="two-week-calendar"></div>
       <div id="recipe-results" hidden>
         <!-- JavaScript generates meal cards here -->
@@ -103,7 +113,7 @@
 
     </section>
 
-<section id="plan-analysis" hidden>
+<section id="plan-analysis" class="app-panel" data-panel="insights" hidden>
   <h2>Weekly Plan Analysis</h2>
 
   <p>
@@ -157,9 +167,9 @@
 
     <!-- GROCERY LIST -->
 
-    <section id="grocery-section" class="planner-card">
+    <section id="grocery-section" class="planner-card app-panel" data-panel="groceries" hidden>
 
-      <h2>Shopping basket <span class="heading-flower">✿</span></h2>
+      <h2>Grocery lists</h2>
 
       <p>
         Estimated purchases are separated by week; Week 2 uses measured leftovers from Week 1.
@@ -187,6 +197,7 @@
 
   <script src="ingredients.js"></script>
   <script src="script.js"></script>
+  <script src="ui.js"></script>
 
 </body>
 </html>
